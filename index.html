@@ -115,6 +115,7 @@
     display:inline-block;border:1.5px solid var(--border);border-radius:10px;padding:1px 8px;
     font-size:10.5px;font-weight:700;margin-right:5px;
   }
+  .cat-line{margin:0 0 8px;}
   .coach-line{font-size:11.5px;color:var(--muted);margin:-2px 0 8px;}
   .school-note-chips{display:flex;flex-wrap:wrap;gap:6px;}
   .school-note-chip{
@@ -638,7 +639,8 @@ function locationBadge(slot){
 }
 function categoryBadges(slot){
   if(!slot.categories || slot.categories.length === 0) return '';
-  return slot.categories.map(c => `<span class="cat-badge" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</span>`).join('');
+  const badges = slot.categories.map(c => `<span class="cat-badge" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</span>`).join('');
+  return `<div class="cat-line">${badges}</div>`;
 }
 function coachLine(slot){
   if(!slot.coaches || slot.coaches.length === 0) return '';
@@ -659,7 +661,8 @@ function formatTimeRange(slot){
 
 function renderSlotAttendBlock(slot, idx, totalSlots){
   const timeRange = formatTimeRange(slot);
-  const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${categoryBadges(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+  const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+  const catLine = categoryBadges(slot);
   const coachLn = coachLine(slot);
   const noteLn = schoolNoteBadges(slot);
   const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
@@ -667,13 +670,7 @@ function renderSlotAttendBlock(slot, idx, totalSlots){
   return `
     <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}">
       ${slotLabel}
-      ${metaLine}${coachLn}${noteLn}${msgLine}
-      <div class="chips">
-        <div class="chip" data-type="attend" onclick="selectChip(this)">参加</div>
-        <div class="chip" data-type="absent" onclick="selectChip(this)">欠席</div>
-        <div class="chip" data-type="late" onclick="selectChip(this)">遅刻</div>
-        <div class="chip" data-type="early" onclick="selectChip(this)">早退</div>
-        <div class="chip" data-type="other" onclick="selectChip(this)">フリーメッセージ</div>
+      ${metaLine}${catLine}${coachLn}${noteLn}${msgLine}
       </div>
       <div class="time-inline" data-type="late">
         <span class="tlabel">到着予定</span><input type="time" class="lateTime">
@@ -827,7 +824,8 @@ async function loadSummary(){
         const totalCount = statusOrder.reduce((sum, k) => sum + groups[k].length, 0);
         if(totalCount === 0) return '';
         const timeRange = formatTimeRange(slot);
-        const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${categoryBadges(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+        const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+        const catLine = categoryBadges(slot);
         const coachLn = coachLine(slot);
         const noteLn = schoolNoteBadges(slot);
         const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
@@ -840,7 +838,7 @@ async function loadSummary(){
               <div class="group-names">${groups[k].map(n => `<div class="name-item">${n}</div>`).join('')}</div>
             </div>
           `).join('');
-        return `<div class="slot-color-${idx}">${slotLabel}${metaLine}${coachLn}${noteLn}${msgLine}${groupsHtml}</div>`;
+        return `<div class="slot-color-${idx}">${slotLabel}${metaLine}${catLine}${coachLn}${noteLn}${msgLine}${groupsHtml}</div>`;
       }).join('');
       if(!slotBlocksHtml.trim()) continue;
       html += `<div class="summary-date"><div class="d-title">${shortLabel(ds)}</div>${slotBlocksHtml}</div>`;
