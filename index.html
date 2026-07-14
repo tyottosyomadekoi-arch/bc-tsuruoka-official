@@ -671,6 +671,12 @@ function renderSlotAttendBlock(slot, idx, totalSlots){
     <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}">
       ${slotLabel}
       ${metaLine}${catLine}${coachLn}${noteLn}${msgLine}
+      <div class="chips">
+        <div class="chip" data-type="attend" onclick="selectChip(this)">参加</div>
+        <div class="chip" data-type="absent" onclick="selectChip(this)">欠席</div>
+        <div class="chip" data-type="late" onclick="selectChip(this)">遅刻</div>
+        <div class="chip" data-type="early" onclick="selectChip(this)">早退</div>
+        <div class="chip" data-type="other" onclick="selectChip(this)">フリーメッセージ</div>
       </div>
       <div class="time-inline" data-type="late">
         <span class="tlabel">到着予定</span><input type="time" class="lateTime">
