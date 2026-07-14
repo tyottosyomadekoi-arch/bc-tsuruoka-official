@@ -139,7 +139,20 @@
   .remove-child{color:var(--early);background:none;border:none;font-size:12px;cursor:pointer;touch-action:manipulation;}
   .date-row{border-bottom:1px solid var(--border);padding:10px 2px;}
   .date-row:last-child{border-bottom:none;}
-  .date-row .date-label{font-size:13.5px;font-weight:700;margin-bottom:6px;}
+  .date-row .date-label{font-size:15.5px;font-weight:700;margin-bottom:6px;}
+  .date-row.day-sat, .summary-date.day-sat{background:#EAF3FB;border-radius:8px;}
+  .date-row.day-sun, .summary-date.day-sun, .date-row.day-holiday, .summary-date.day-holiday{background:#FBEAEA;border-radius:8px;}
+  .date-row.day-sat, .date-row.day-sun, .date-row.day-holiday{padding:8px 8px 4px;margin-bottom:2px;}
+  .summary-date.day-sat, .summary-date.day-sun, .summary-date.day-holiday{padding:10px 8px;}
+  .holiday-name{font-size:11px;font-weight:700;color:#C0392B;margin-left:6px;}
+  .today-badge{
+    display:inline-block;background:var(--navy);color:#fff;font-size:10.5px;font-weight:700;
+    border-radius:10px;padding:1px 9px;margin-left:8px;vertical-align:middle;
+  }
+  .next-badge{
+    display:inline-block;background:#fff;color:var(--navy);border:1.5px solid var(--navy);
+    font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 9px;margin-left:8px;vertical-align:middle;
+  }
   .chips{display:flex;gap:6px;flex-wrap:wrap;}
   .chip{
     border:1.5px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted);background:#fff;
@@ -161,9 +174,13 @@
   .submit-btn{width:100%;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
   .status-msg{font-size:12.5px;text-align:center;margin-top:10px;color:var(--muted);}
 
+  .answered-count{
+    font-size:13px;font-weight:700;color:var(--navy);background:var(--light-blue);
+    border-radius:8px;padding:8px 12px;margin-bottom:10px;
+  }
   .summary-date{padding:10px 4px;border-bottom:1px solid var(--border);}
   .summary-date:last-child{border-bottom:none;}
-  .summary-date .d-title{font-size:13.5px;font-weight:700;margin-bottom:8px;}
+  .summary-date .d-title{font-size:15.5px;font-weight:700;margin-bottom:8px;}
   .summary-date > .slot-color-0{border-left:4px solid var(--navy);padding:4px 0 8px 10px;margin-bottom:8px;}
   .summary-date > .slot-color-1{border-left:4px solid #C0682B;padding:4px 0 8px 10px;margin-bottom:8px;}
   .status-group{margin-bottom:8px;}
@@ -297,6 +314,57 @@ function shortLabel(dstr){
   return `${parseInt(parts[1])}/${parseInt(parts[2])}(${weekdayOf(dstr)})`;
 }
 
+// 日本の祝日データ（年ごとにキャッシュ）
+let holidaysCache = {};
+async function loadHolidaysForYear(year){
+  if(holidaysCache[year]) return holidaysCache[year];
+  try{
+    const res = await fetch(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+    const data = await res.json();
+    holidaysCache[year] = data || {};
+  }catch(e){
+    console.error(e);
+    holidaysCache[year] = {};
+  }
+  return holidaysCache[year];
+}
+async function ensureHolidaysLoaded(dates){
+  const years = new Set(dates.map(ds => ds.split('-')[0]));
+  await Promise.all(Array.from(years).map(y => loadHolidaysForYear(y)));
+}
+function holidayNameFor(ds){
+  const year = ds.split('-')[0];
+  const map = holidaysCache[year];
+  return map ? (map[ds] || null) : null;
+}
+function dayClassFor(ds){
+  const holidayName = holidayNameFor(ds);
+  if(holidayName) return 'day-holiday';
+  const weekday = new Date(ds + 'T00:00:00').getDay();
+  if(weekday === 0) return 'day-sun';
+  if(weekday === 6) return 'day-sat';
+  return '';
+}
+function dateLabelWithHoliday(ds){
+  const holidayName = holidayNameFor(ds);
+  return `${shortLabel(ds)}${holidayName ? `<span class="holiday-name">${escapeHtml(holidayName)}</span>` : ''}`;
+}
+
+function getTodayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function computeNextPracticeDate(dates){
+  const todayStr = getTodayStr();
+  const upcoming = dates.filter(d => d >= todayStr).sort();
+  return upcoming.length > 0 ? upcoming[0] : null;
+}
+function dateBadgeFor(ds, todayStr, nextDate){
+  if(ds === todayStr) return '<span class="today-badge">今日</span>';
+  if(ds === nextDate) return '<span class="next-badge">次回</span>';
+  return '';
+}
+
 function defaultSlot(){
   return { location: '', customLocation: '', startTime: '19:00', endTime: '21:00', categories: [], coaches: [], message: '', schoolNotes: [] };
 }
@@ -309,7 +377,7 @@ const WEEKDAY_DEFAULTS = {
   3: { location: '宝田',   startTime: '19:00', endTime: '21:15', categories: ['区分A', '小学生'] },
   4: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: ['区分A', '区分B'] },
   5: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: ['区分A', '区分B'] },
-  6: { location: '六コミ', startTime: '9:00',  endTime: '12:00', categories: ['区分A', '小学生'] }
+  6: { location: '六コミ', startTime: '09:00',  endTime: '12:00', categories: ['区分A', '小学生'] }
 };
 function defaultSlotForDate(ds){
   const weekday = new Date(ds + 'T00:00:00').getDay();
@@ -534,6 +602,9 @@ async function loadPracticeDates(){
     console.error(e);
     practiceDates = [];
   }
+  if(practiceDates.length > 0){
+    await ensureHolidaysLoaded(practiceDates.map(pd => pd.date));
+  }
   renderChildren();
   loadSummary();
   loadMonthSummaryDisplay();
@@ -672,11 +743,11 @@ function renderSlotAttendBlock(slot, idx, totalSlots){
       ${slotLabel}
       ${metaLine}${catLine}${coachLn}${noteLn}${msgLine}
       <div class="chips">
-        <div class="chip" data-type="attend" onclick="selectChip(this)">参加</div>
-        <div class="chip" data-type="absent" onclick="selectChip(this)">欠席</div>
-        <div class="chip" data-type="late" onclick="selectChip(this)">遅刻</div>
-        <div class="chip" data-type="early" onclick="selectChip(this)">早退</div>
-        <div class="chip" data-type="other" onclick="selectChip(this)">フリーメッセージ</div>
+        <div class="chip" data-type="attend" onclick="selectChip(this)">✓ 参加</div>
+        <div class="chip" data-type="absent" onclick="selectChip(this)">✕ 欠席</div>
+        <div class="chip" data-type="late" onclick="selectChip(this)">⏰ 遅刻</div>
+        <div class="chip" data-type="early" onclick="selectChip(this)">↩ 早退</div>
+        <div class="chip" data-type="other" onclick="selectChip(this)">💬 フリーメッセージ</div>
       </div>
       <div class="time-inline" data-type="late">
         <span class="tlabel">到着予定</span><input type="time" class="lateTime">
@@ -697,12 +768,14 @@ function renderDatesForChild(block){
     list.innerHTML = `<div class="empty">この月の練習日がまだ設定されていません</div>`;
     return;
   }
+  const todayStr = getTodayStr();
+  const nextDate = computeNextPracticeDate(practiceDates.map(pd => pd.date));
   list.innerHTML = practiceDates.map(pd => {
     const ds = pd.date;
     const slotsHtml = pd.slots.map((slot, idx) => renderSlotAttendBlock(slot, idx, pd.slots.length)).join('');
     return `
-    <div class="date-row" data-date="${ds}">
-      <div class="date-label">${shortLabel(ds)}</div>
+    <div class="date-row ${dayClassFor(ds)}" data-date="${ds}">
+      <div class="date-label">${dateLabelWithHoliday(ds)}${dateBadgeFor(ds, todayStr, nextDate)}</div>
       ${slotsHtml}
     </div>
   `;
@@ -811,9 +884,11 @@ async function loadSummary(){
       container.innerHTML = '<div class="empty">まだ回答がありません</div>';
       return;
     }
-    let html = '';
-    const labelMap = { attend: '出席', absent: '欠席', late: '遅刻', early: '早退', other: 'フリーメッセージ' };
+    let html = `<div class="answered-count">回答済み：${submissions.length}名</div>`;
+    const labelMap = { attend: '✓ 出席', absent: '✕ 欠席', late: '⏰ 遅刻', early: '↩ 早退', other: '💬 フリーメッセージ' };
     const statusOrder = ['attend', 'absent', 'late', 'early', 'other'];
+    const todayStr = getTodayStr();
+    const nextDate = computeNextPracticeDate(practiceDates.map(pd => pd.date));
     for(const pd of practiceDates){
       const ds = pd.date;
       const slotBlocksHtml = pd.slots.map((slot, idx) => {
@@ -847,7 +922,7 @@ async function loadSummary(){
         return `<div class="slot-color-${idx}">${slotLabel}${metaLine}${catLine}${coachLn}${noteLn}${msgLine}${groupsHtml}</div>`;
       }).join('');
       if(!slotBlocksHtml.trim()) continue;
-      html += `<div class="summary-date"><div class="d-title">${shortLabel(ds)}</div>${slotBlocksHtml}</div>`;
+      html += `<div class="summary-date ${dayClassFor(ds)}"><div class="d-title">${dateLabelWithHoliday(ds)}${dateBadgeFor(ds, todayStr, nextDate)}</div>${slotBlocksHtml}</div>`;
     }
     container.innerHTML = html || '<div class="empty">まだ回答がありません</div>';
   }catch(e){
