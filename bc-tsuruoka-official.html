@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>BC鶴岡 練習出欠確認</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --navy: #0F766E;
+    --navy-dark: #0B5C56;
+    --light-blue: #F0FAF9;
+    --border: #D7ECE9;
+    --ok: #2E8B57;
+    --late: #B8860B;
+    --early: #C0682B;
+    --absent: #B0413E;
+    --other: #6B5B95;
+    --muted: #6B8683;
+    --text: #1F3A38;
+  }
+  *{box-sizing:border-box;}
+  button, .chip, .cal-day, .link-btn, .remove-child{touch-action:manipulation;}
+  body{margin:0;font-family:Arial,"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;background:var(--light-blue);color:var(--text);min-height:100vh;}
+  .header{background:var(--navy);color:#fff;padding:20px 20px 24px;position:relative;overflow:hidden;}
+  .header h1{margin:0;font-size:18px;font-weight:700;}
+  .header p{margin:6px 0 0;font-size:12px;opacity:0.85;}
+  .shuttle{position:absolute;right:-10px;top:-14px;width:70px;height:70px;opacity:0.18;}
+  .wrap{max-width:520px;margin:-14px auto 0;padding:0 14px 40px;}
+  .card{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(15,118,110,0.08);padding:16px;margin-bottom:14px;}
+  .card h2{font-size:13px;color:var(--navy);margin:0 0 12px;font-weight:700;display:flex;align-items:center;gap:6px;}
+  .card h2::before{content:"";width:4px;height:14px;background:var(--navy);border-radius:2px;display:inline-block;}
+  label.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  input[type=text], input[type=month], input[type=time]{
+    width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:14.5px;font-family:inherit;color:var(--text);background:#fff;
+  }
+  .field{margin-bottom:12px;}
+  .row-between{display:flex;justify-content:space-between;align-items:center;}
+  .link-btn{background:none;border:none;color:var(--navy);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0;}
+
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}
+  .cal-wd{text-align:center;font-size:10.5px;color:var(--muted);padding-bottom:2px;}
+  .cal-day{
+    aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer;background:#fff;
+  }
+  .cal-day.blank{border:none;cursor:default;}
+  .cal-day.active{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;}
+  .save-btn{margin-top:10px;width:100%;background:var(--navy);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;}
+
+  .detail-row{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;}
+  .detail-row .detail-date{font-size:13px;font-weight:700;margin-bottom:8px;}
+  .loc-radios{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .loc-radio{
+    border:1.5px solid var(--border);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:700;
+    cursor:pointer;color:var(--muted);background:#fff;touch-action:manipulation;
+  }
+  .loc-radio.on{border-color:var(--navy);background:var(--light-blue);color:var(--navy);}
+  .loc-radio.on[data-loc="六コミ"], .loc-badge[data-loc="六コミ"]{border-color:#1F5C99;background:#E8F1FA;color:#1F5C99;}
+  .loc-radio.on[data-loc="武道館"], .loc-badge[data-loc="武道館"]{border-color:#6B5B95;background:#EFECF7;color:#6B5B95;}
+  .loc-radio.on[data-loc="宝田"], .loc-badge[data-loc="宝田"]{border-color:#2E8B8B;background:#E6F5F5;color:#2E8B8B;}
+  .loc-radio.on[data-loc="櫛スポ"], .loc-badge[data-loc="櫛スポ"]{border-color:#C0682B;background:#FBEEE4;color:#C0682B;}
+  .loc-radio.on[data-loc="羽黒体"], .loc-badge[data-loc="羽黒体"]{border-color:#2E8B57;background:#E9F6EF;color:#2E8B57;}
+  .loc-radio.on[data-loc="藤島体"], .loc-badge[data-loc="藤島体"]{border-color:#B0417A;background:#FAE9F1;color:#B0417A;}
+  .loc-radio.on[data-loc="その他"], .loc-badge[data-loc="その他"]{border-color:#8B5A3C;background:#EFECF5;color:#8B5A3C;}
+  .loc-badge{display:inline-block;border:1.5px solid var(--border);border-radius:10px;padding:1px 9px;font-size:11px;font-weight:700;margin-right:6px;}
+  .detail-row input[type=time]{width:120px;margin-bottom:8px;}
+  .time-range{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+  .time-range input[type=time]{margin-bottom:0;}
+  .time-range .tlabel{font-size:12px;color:var(--muted);}
+  .detail-row input[type=text]{width:100%;}
+  .summary-textarea{
+    width:100%;min-height:70px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
+    font-size:13.5px;font-family:inherit;color:var(--text);background:#fff;resize:vertical;
+  }
+  #announcementCard ul{margin:0 0 10px;padding-left:18px;font-size:13px;color:var(--text);}
+  #announcementCard .announce-label{font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:4px;}
+  .date-meta{font-size:11.5px;color:var(--muted);margin:-2px 0 8px;}
+  .date-note{
+    background:#FFF7E0;border-left:3px solid var(--late);border-radius:6px;
+    padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--text);margin:0 0 8px;
+  }
+
+  .slot-card{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;background:#fff;}
+  .slot-card.slot-color-0{border-left:4px solid var(--navy);}
+  .slot-card.slot-color-1{border-left:4px solid #C0682B;}
+  .slot-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .slot-title{font-size:12.5px;font-weight:700;color:var(--navy);}
+  .slot-color-1 .slot-title{color:#C0682B;}
+  .remove-slot-btn{background:none;border:none;color:var(--early);font-size:11.5px;cursor:pointer;touch-action:manipulation;}
+  .add-slot-btn{
+    width:100%;border:1.5px dashed var(--border);background:#fff;color:var(--navy);
+    padding:8px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:8px;touch-action:manipulation;
+  }
+  .cat-chips, .coach-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .cat-chip, .coach-chip{
+    border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11.5px;font-weight:700;
+    cursor:pointer;color:var(--muted);background:#fff;touch-action:manipulation;
+  }
+  .cat-chip.on[data-cat="部活動"], .cat-badge[data-cat="部活動"]{border-color:#1F5C99;background:#E8F1FA;color:#1F5C99;}
+  .cat-chip.on[data-cat="区分A"], .cat-badge[data-cat="区分A"]{border-color:#6B5B95;background:#EFECF7;color:#6B5B95;}
+  .cat-chip.on[data-cat="区分B"], .cat-badge[data-cat="区分B"]{border-color:#2E8B8B;background:#E6F5F5;color:#2E8B8B;}
+  .cat-chip.on[data-cat="小学生"], .cat-badge[data-cat="小学生"]{border-color:#C0682B;background:#FBEEE4;color:#C0682B;}
+  .coach-chip.on[data-coach="杉山"], .coach-badge[data-coach="杉山"]{border-color:#1F5C99;background:#E8F1FA;color:#1F5C99;}
+  .coach-chip.on[data-coach="武田"], .coach-badge[data-coach="武田"]{border-color:#6B5B95;background:#EFECF7;color:#6B5B95;}
+  .coach-chip.on[data-coach="大川"], .coach-badge[data-coach="大川"]{border-color:#2E8B8B;background:#E6F5F5;color:#2E8B8B;}
+  .coach-chip.on[data-coach="遠藤"], .coach-badge[data-coach="遠藤"]{border-color:#C0682B;background:#FBEEE4;color:#C0682B;}
+  .coach-chip.on[data-coach="石川"], .coach-badge[data-coach="石川"]{border-color:#2E8B57;background:#E9F6EF;color:#2E8B57;}
+  .coach-chip.on[data-coach="菅原"], .coach-badge[data-coach="菅原"]{border-color:#B0417A;background:#FAE9F1;color:#B0417A;}
+  .coach-chip.on[data-coach="後藤"], .coach-badge[data-coach="後藤"]{border-color:#8B5A3C;background:#F3E9DE;color:#8B5A3C;}
+  .cat-badge, .coach-badge{
+    display:inline-block;border:1.5px solid var(--border);border-radius:10px;padding:1px 8px;
+    font-size:10.5px;font-weight:700;margin-right:5px;
+  }
+  .coach-line{font-size:11.5px;color:var(--muted);margin:-2px 0 8px;}
+  .school-note-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .school-note-chip{
+    border:1.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11.5px;font-weight:700;
+    cursor:pointer;color:var(--muted);background:#fff;touch-action:manipulation;
+  }
+  .school-note-chip.on{border-color:#C0392B;background:#FBE9E8;color:#C0392B;}
+  .school-note-line{margin:-2px 0 8px;}
+  .school-note-badge{
+    display:inline-block;border:1.5px solid #C0392B;border-radius:10px;padding:1px 8px;
+    font-size:10.5px;font-weight:700;color:#C0392B;background:#FBE9E8;margin-right:5px;
+  }
+
+  .slot-attend-block{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;}
+  .slot-attend-block.slot-color-0{border-left:4px solid var(--navy);}
+  .slot-attend-block.slot-color-1{border-left:4px solid #C0682B;}
+  .slot-attend-block .slot-title{margin-bottom:6px;}
+
+  .child-block{border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
+  .child-block .row-between{margin-bottom:10px;}
+  .remove-child{color:var(--early);background:none;border:none;font-size:12px;cursor:pointer;touch-action:manipulation;}
+  .date-row{border-bottom:1px solid var(--border);padding:10px 2px;}
+  .date-row:last-child{border-bottom:none;}
+  .date-row .date-label{font-size:13.5px;font-weight:700;margin-bottom:6px;}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{
+    border:1.5px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted);background:#fff;
+  }
+  .chip.on[data-type="attend"]{border-color:var(--ok);background:#EAF6EE;color:var(--ok);}
+  .chip.on[data-type="absent"]{border-color:var(--absent);background:#FBE9E8;color:var(--absent);}
+  .chip.on[data-type="late"]{border-color:var(--late);background:#FBF3E1;color:var(--late);}
+  .chip.on[data-type="early"]{border-color:var(--early);background:#FCEDE4;color:var(--early);}
+  .chip.on[data-type="other"]{border-color:var(--other);background:#EFECF5;color:var(--other);}
+  .time-inline{display:none;align-items:center;gap:6px;margin-top:6px;}
+  .time-inline.show{display:flex;}
+  .time-inline input{width:120px;}
+  .time-inline .tlabel{font-size:12px;color:var(--muted);}
+  .other-inline{display:none;margin-top:6px;}
+  .other-inline.show{display:block;}
+  .other-inline input{width:100%;}
+
+  .add-child-btn{width:100%;border:1.5px dashed var(--border);background:#fff;color:var(--navy);padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;}
+  .submit-btn{width:100%;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;}
+  .status-msg{font-size:12.5px;text-align:center;margin-top:10px;color:var(--muted);}
+
+  .summary-date{padding:10px 4px;border-bottom:1px solid var(--border);}
+  .summary-date:last-child{border-bottom:none;}
+  .summary-date .d-title{font-size:13.5px;font-weight:700;margin-bottom:8px;}
+  .summary-date > .slot-color-0{border-left:4px solid var(--navy);padding:4px 0 8px 10px;margin-bottom:8px;}
+  .summary-date > .slot-color-1{border-left:4px solid #C0682B;padding:4px 0 8px 10px;margin-bottom:8px;}
+  .status-group{margin-bottom:8px;}
+  .status-group:last-child{margin-bottom:0;}
+  .status-group .group-label{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-bottom:5px;
+  }
+  .status-group .group-names{font-size:12.5px;color:var(--text);line-height:1.6;padding-left:2px;}
+  .status-group .group-names .name-item{padding:2px 0;}
+  .group-label.attend{background:#EAF6EE;color:var(--ok);}
+  .group-label.absent{background:#FBE9E8;color:var(--absent);}
+  .group-label.late{background:#FBF3E1;color:var(--late);}
+  .group-label.early{background:#FCEDE4;color:var(--early);}
+  .group-label.other{background:#EFECF5;color:var(--other);}
+  .empty{text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;}
+  .liff-note{font-size:11px;color:var(--muted);text-align:center;padding-top:2px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg class="shuttle" viewBox="0 0 100 100" fill="#fff">
+    <circle cx="50" cy="20" r="12"/>
+    <path d="M50 32 L30 85 M50 32 L50 88 M50 32 L70 85" stroke="#fff" stroke-width="3" fill="none"/>
+  </svg>
+  <h1>BC鶴岡 練習出欠確認</h1>
+  <p id="userGreeting">LINEで読み込み中…</p>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="row-between">
+      <h2 style="margin-bottom:0;">対象月</h2>
+      <button class="link-btn" id="adminToggle" onclick="toggleAdmin()">練習日程登録（コーチ用）</button>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <input type="month" id="monthInput">
+    </div>
+    <div id="adminPanel" style="display:none;">
+      <label class="field-label">練習日をタップして設定（コーチ用）</label>
+      <div class="cal-grid" id="calGrid"></div>
+      <div id="dateDetailList" style="margin-top:10px;"></div>
+      <button class="save-btn" onclick="savePracticeDates()">この月の練習日を保存</button>
+
+      <label class="field-label" style="margin-top:16px;">今月のお知らせ（コーチ用・箇条書き）</label>
+      <textarea id="currentMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
+      <label class="field-label" style="margin-top:10px;">来月のお知らせ（コーチ用・箇条書き）</label>
+      <textarea id="nextMonthSummaryInput" class="summary-textarea" placeholder="例：連絡事項を入れてください"></textarea>
+      <button class="save-btn" onclick="saveMonthSummary()">サマリーを保存</button>
+    </div>
+  </div>
+
+  <div class="card" id="announcementCard" style="display:none;">
+    <h2>お知らせ</h2>
+    <div id="currentMonthSummaryDisplay"></div>
+    <div id="nextMonthSummaryDisplay"></div>
+  </div>
+
+  <div id="childrenContainer"></div>
+  <button class="add-child-btn" onclick="addChild()">＋ お子様を追加（兄弟対応）</button>
+
+  <div class="card">
+    <button class="submit-btn" id="submitBtn" onclick="submitAll()">この月の出欠をまとめて送信</button>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>今月の全体状況</h2>
+    <div id="summaryContainer"><div class="empty">読み込み中…</div></div>
+  </div>
+
+  <div class="liff-note">BC鶴岡 練習管理</div>
+</div>
+
+<script>
+// ▼▼ Google Apps Scriptの「ウェブアプリのURL」をここに貼り付けてください ▼▼
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFtFiig4V9i3J3F6N9KIJ-WX1zTzgaIubdrSsdXUyvf8C1d-wmEyUuvOCUdsCVUuCM/exec';
+// ▲▲ ---------------------------------------------------------- ▲▲
+
+let lineDisplayName = null;
+let practiceDates = []; // array of {date, slots: [{location, customLocation, startTime, endTime, categories, coaches, message}, ...]}
+let adminSelection = new Map(); // date -> {slots: [...]}
+let childCounter = 0;
+const LOCATIONS = ['六コミ', '武道館', '宝田', '櫛スポ', '羽黒体', '藤島体', 'その他'];
+const CATEGORIES = ['部活動', '区分A', '区分B', '小学生'];
+const COACHES = ['杉山', '武田', '大川', '遠藤', '石川', '菅原', '後藤'];
+const SCHOOL_NOTES = ['部停止', 'テスト期間', '学校行事'];
+const MAX_SLOTS = 2;
+
+async function apiGet(action, params){
+  const q = new URLSearchParams({ action, ...params, _t: Date.now() }).toString();
+  const res = await fetch(`${APPS_SCRIPT_URL}?${q}`);
+  return res.json();
+}
+async function apiPost(payload){
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' }, // Apps Script simple trigger回避のためtext/plainで送信
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+const WD = ['日','月','火','水','木','金','土'];
+
+function currentMonthStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+document.getElementById('monthInput').value = currentMonthStr();
+
+function daysInMonth(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+function firstWeekday(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m-1, 1).getDay();
+}
+function dateStr(ym, day){
+  const [y,m] = ym.split('-').map(Number);
+  return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+function weekdayOf(dstr){
+  return WD[new Date(dstr+'T00:00:00').getDay()];
+}
+function shortLabel(dstr){
+  const parts = dstr.split('-');
+  return `${parseInt(parts[1])}/${parseInt(parts[2])}(${weekdayOf(dstr)})`;
+}
+
+function defaultSlot(){
+  return { location: '', customLocation: '', startTime: '19:00', endTime: '21:00', categories: [], coaches: [], message: '', schoolNotes: [] };
+}
+
+// 曜日ごとの標準会場・時間（0=日, 1=月, ... 6=土）
+const WEEKDAY_DEFAULTS = {
+  0: { location: '六コミ', startTime: '13:00', endTime: '17:00', categories: ['区分A', '小学生'] },
+  1: { location: '武道館', startTime: '19:00', endTime: '21:15', categories: ['区分A', '小学生'] },
+  2: { location: '武道館', startTime: '19:00', endTime: '21:15', categories: ['区分A', '小学生'] },
+  3: { location: '宝田',   startTime: '19:00', endTime: '21:15', categories: ['区分A', '小学生'] },
+  4: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: ['区分A', '区分B'] },
+  5: { location: '六コミ', startTime: '15:30', endTime: '19:00', categories: ['区分A', '区分B'] },
+  6: { location: '六コミ', startTime: '9:00',  endTime: '12:00', categories: ['区分A', '小学生'] }
+};
+function defaultSlotForDate(ds){
+  const weekday = new Date(ds + 'T00:00:00').getDay();
+  const wd = WEEKDAY_DEFAULTS[weekday];
+  const base = defaultSlot();
+  if(wd) return { ...base, location: wd.location, startTime: wd.startTime, endTime: wd.endTime, categories: [...(wd.categories||[])] };
+  return base;
+}
+
+function toggleAdmin(){
+  const panel = document.getElementById('adminPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if(show){
+    adminSelection = new Map(practiceDates.map(pd => [pd.date, {
+      slots: pd.slots.map(s => ({ ...s, categories: [...(s.categories||[])], coaches: [...(s.coaches||[])], schoolNotes: [...(s.schoolNotes||[])] }))
+    }]));
+    renderCalGrid();
+    renderDateDetailList();
+    loadMonthSummaryIntoInputs();
+  }
+}
+
+function renderCalGrid(){
+  const ym = document.getElementById('monthInput').value;
+  const grid = document.getElementById('calGrid');
+  const total = daysInMonth(ym);
+  const offset = firstWeekday(ym);
+  let html = WD.map(w => `<div class="cal-wd">${w}</div>`).join('');
+  for(let i=0;i<offset;i++) html += `<div class="cal-day blank"></div>`;
+  for(let d=1; d<=total; d++){
+    const ds = dateStr(ym, d);
+    const active = adminSelection.has(ds) ? 'active' : '';
+    html += `<div class="cal-day ${active}" data-date="${ds}" onclick="toggleCalDay('${ds}')">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+function toggleCalDay(ds){
+  if(adminSelection.has(ds)) adminSelection.delete(ds);
+  else adminSelection.set(ds, { slots: [defaultSlotForDate(ds)] });
+  renderCalGrid();
+  renderDateDetailList();
+}
+
+function renderDateDetailList(){
+  const container = document.getElementById('dateDetailList');
+  const dates = Array.from(adminSelection.keys()).sort();
+  if(dates.length === 0){
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = dates.map(ds => {
+    const detail = adminSelection.get(ds);
+    const slotsHtml = detail.slots.map((slot, idx) => renderSlotEditor(ds, slot, idx, detail.slots.length)).join('');
+    const addBtn = detail.slots.length < MAX_SLOTS
+      ? `<button type="button" class="add-slot-btn" onclick="addSlot('${ds}')">＋ 会場を追加（最大${MAX_SLOTS}）</button>`
+      : '';
+    return `
+      <div class="detail-row" data-date="${ds}">
+        <div class="detail-date">${shortLabel(ds)}</div>
+        ${slotsHtml}
+        ${addBtn}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSlotEditor(ds, slot, idx, totalSlots){
+  const radios = LOCATIONS.map(loc => `
+    <div class="loc-radio ${slot.location === loc ? 'on' : ''}" data-loc="${loc}" onclick="selectSlotLocation(this,'${ds}',${idx},'${loc}')">${loc}</div>
+  `).join('');
+  const showCustom = slot.location === 'その他';
+  const catChips = CATEGORIES.map(cat => `
+    <div class="cat-chip ${slot.categories.includes(cat) ? 'on' : ''}" data-cat="${cat}" onclick="toggleSlotCategory(this,'${ds}',${idx},'${cat}')">${cat}</div>
+  `).join('');
+  const coachChips = COACHES.map(coach => `
+    <div class="coach-chip ${slot.coaches.includes(coach) ? 'on' : ''}" data-coach="${coach}" onclick="toggleSlotCoach(this,'${ds}',${idx},'${coach}')">${coach}</div>
+  `).join('');
+  const schoolNoteChips = SCHOOL_NOTES.map(note => `
+    <div class="school-note-chip ${slot.schoolNotes.includes(note) ? 'on' : ''}" onclick="toggleSlotSchoolNote(this,'${ds}',${idx},'${note}')">${note}</div>
+  `).join('');
+  const removeBtn = totalSlots > 1
+    ? `<button type="button" class="remove-slot-btn" onclick="removeSlot('${ds}',${idx})">この会場を削除</button>`
+    : '';
+  return `
+    <div class="slot-card slot-color-${idx}" data-date="${ds}" data-slot-idx="${idx}">
+      <div class="slot-card-header">
+        ${totalSlots > 1 ? `<span class="slot-title">会場${idx + 1}</span>` : ''}
+        ${removeBtn}
+      </div>
+      <label class="field-label">会場</label>
+      <div class="loc-radios">${radios}</div>
+      <input type="text" class="loc-custom-input" style="display:${showCustom ? 'block' : 'none'};margin-bottom:8px;" value="${slot.customLocation ? escapeHtml(slot.customLocation) : ''}" placeholder="会場名を入力" oninput="updateSlotDetail('${ds}',${idx},'customLocation',this.value)">
+      <label class="field-label">時間</label>
+      <div class="time-range">
+        <input type="time" value="${slot.startTime || ''}" oninput="updateSlotDetail('${ds}',${idx},'startTime',this.value)">
+        <span class="tlabel">〜</span>
+        <input type="time" value="${slot.endTime || ''}" oninput="updateSlotDetail('${ds}',${idx},'endTime',this.value)">
+      </div>
+      <label class="field-label">対象区分（複数選択可）</label>
+      <div class="cat-chips">${catChips}</div>
+      <label class="field-label">責任者コーチ（複数選択可）</label>
+      <div class="coach-chips">${coachChips}</div>
+      <label class="field-label">コメント</label>
+      <input type="text" value="${slot.message ? escapeHtml(slot.message) : ''}" placeholder="フリーメッセージ" oninput="updateSlotDetail('${ds}',${idx},'message',this.value)">
+      <label class="field-label" style="margin-top:8px;">学校備考欄（複数選択可）</label>
+      <div class="school-note-chips">${schoolNoteChips}</div>
+    </div>
+  `;
+}
+
+function addSlot(ds){
+  const detail = adminSelection.get(ds);
+  if(!detail || detail.slots.length >= MAX_SLOTS) return;
+  detail.slots.push(defaultSlot());
+  renderDateDetailList();
+}
+function removeSlot(ds, idx){
+  const detail = adminSelection.get(ds);
+  if(!detail) return;
+  detail.slots.splice(idx, 1);
+  renderDateDetailList();
+}
+function selectSlotLocation(el, ds, idx, loc){
+  const card = el.closest('.slot-card');
+  card.querySelectorAll('.loc-radio').forEach(r => r.classList.remove('on'));
+  el.classList.add('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(slot) slot.location = loc;
+  const customInput = card.querySelector('.loc-custom-input');
+  if(customInput) customInput.style.display = (loc === 'その他') ? 'block' : 'none';
+}
+function toggleSlotCategory(el, ds, idx, cat){
+  el.classList.toggle('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  const on = el.classList.contains('on');
+  if(on){ if(!slot.categories.includes(cat)) slot.categories.push(cat); }
+  else{ slot.categories = slot.categories.filter(c => c !== cat); }
+}
+function toggleSlotCoach(el, ds, idx, coach){
+  el.classList.toggle('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  const on = el.classList.contains('on');
+  if(on){ if(!slot.coaches.includes(coach)) slot.coaches.push(coach); }
+  else{ slot.coaches = slot.coaches.filter(c => c !== coach); }
+}
+function toggleSlotSchoolNote(el, ds, idx, note){
+  el.classList.toggle('on');
+  const slot = adminSelection.get(ds).slots[idx];
+  if(!slot) return;
+  const on = el.classList.contains('on');
+  if(!slot.schoolNotes) slot.schoolNotes = [];
+  if(on){ if(!slot.schoolNotes.includes(note)) slot.schoolNotes.push(note); }
+  else{ slot.schoolNotes = slot.schoolNotes.filter(n => n !== note); }
+}
+function updateSlotDetail(ds, idx, field, value){
+  const slot = adminSelection.get(ds).slots[idx];
+  if(slot) slot[field] = value;
+}
+
+async function savePracticeDates(){
+  const ym = document.getElementById('monthInput').value;
+  const arr = Array.from(adminSelection.entries())
+    .map(([date, d]) => ({
+      date,
+      slots: d.slots.map(s => ({
+        location: s.location || '', customLocation: s.customLocation || '',
+        startTime: s.startTime || '', endTime: s.endTime || '',
+        categories: s.categories || [], coaches: s.coaches || [],
+        message: s.message || '', schoolNotes: s.schoolNotes || []
+      }))
+    }))
+    .sort((a,b) => a.date.localeCompare(b.date));
+  if(arr.length === 0){
+    alert('練習日が1つも選ばれていません。カレンダーの日付をタップしてから保存してください。');
+    return;
+  }
+  try{
+    const result = await apiPost({ action: 'savePracticeDates', month: ym, dates: arr });
+    if(!result || !result.ok){
+      alert('保存に失敗しました。もう一度お試しください。');
+      return;
+    }
+    practiceDates = arr;
+    document.getElementById('adminPanel').style.display = 'none';
+    renderChildren();
+    loadSummary();
+    alert(`${arr.length}件の練習日を保存しました。`);
+  }catch(e){
+    console.error(e);
+    alert('保存に失敗しました。通信エラーの可能性があります。(' + (e.message || e) + ')');
+  }
+}
+
+function normalizeSlot(s){
+  return {
+    location: s.location || '', customLocation: s.customLocation || '',
+    startTime: s.startTime || (s.time || ''), endTime: s.endTime || '',
+    categories: Array.isArray(s.categories) ? s.categories : [],
+    coaches: Array.isArray(s.coaches) ? s.coaches : [],
+    message: s.message || '',
+    schoolNotes: Array.isArray(s.schoolNotes) ? s.schoolNotes : []
+  };
+}
+function normalizePracticeDates(raw){
+  return (raw || []).map(item => {
+    if(typeof item === 'string') return { date: item, slots: [defaultSlot()] };
+    if(Array.isArray(item.slots)) return { date: item.date, slots: item.slots.map(normalizeSlot) };
+    // legacy flat structure (no slots array) -> wrap as a single slot
+    return { date: item.date, slots: [normalizeSlot(item)] };
+  });
+}
+
+async function loadPracticeDates(){
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await apiGet('getPracticeDates', { month: ym });
+    practiceDates = normalizePracticeDates(r.dates);
+  }catch(e){
+    console.error(e);
+    practiceDates = [];
+  }
+  renderChildren();
+  loadSummary();
+  loadMonthSummaryDisplay();
+}
+
+function addChild(prefillName){
+  childCounter++;
+  const id = `child_${childCounter}`;
+  const container = document.getElementById('childrenContainer');
+  const block = document.createElement('div');
+  block.className = 'card child-block';
+  block.id = id;
+  block.innerHTML = `
+    <div class="row-between">
+      <div class="field" style="margin:0;flex:1;">
+        <label class="field-label">お子様・コーチのお名前</label>
+        <input type="text" class="childName" placeholder="例）佐藤 太郎" value="${prefillName || ''}">
+      </div>
+      <button class="remove-child" onclick="removeChild('${id}')" style="margin-left:8px;">削除</button>
+    </div>
+    <div class="loadNote" style="font-size:11.5px;color:var(--muted);margin:-4px 0 6px;"></div>
+    <div class="datesList"></div>
+  `;
+  container.appendChild(block);
+  renderDatesForChild(block);
+  block.querySelector('.childName').addEventListener('blur', () => loadAndApplyExisting(block));
+  if(prefillName) loadAndApplyExisting(block);
+}
+
+async function loadAndApplyExisting(block){
+  const nameEl = block.querySelector('.childName');
+  const name = nameEl ? nameEl.value.trim() : '';
+  const note = block.querySelector('.loadNote');
+  if(!name) return;
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await apiGet('getAttendanceList', { month: ym });
+    const submissions = r.submissions || [];
+    const existing = submissions.find(s => s.name === name);
+    if(!existing || !existing.days){
+      if(note) note.textContent = '';
+      return;
+    }
+    block.querySelectorAll('.date-row').forEach(row => {
+      const ds = row.dataset.date;
+      const dayData = existing.days[ds];
+      if(!dayData) return;
+      row.querySelectorAll('.slot-attend-block').forEach(sb => {
+        const idx = sb.dataset.slotIdx;
+        const d = dayData['slot' + idx];
+        if(!d || !d.status) return;
+        const chip = sb.querySelector(`.chip[data-type="${d.status}"]`);
+        if(chip && !chip.classList.contains('on')) selectChip(chip);
+        if(d.status === 'late' && d.time){ const t = sb.querySelector('.lateTime'); if(t) t.value = d.time; }
+        if(d.status === 'early' && d.time){ const t = sb.querySelector('.earlyTime'); if(t) t.value = d.time; }
+        if(d.status === 'other' && d.message){ const m = sb.querySelector('.otherMessage'); if(m) m.value = d.message; }
+      });
+    });
+    if(note) note.textContent = '前回の回答を読み込みました。変更したい日だけ直して送信してください。';
+  }catch(e){
+    console.error(e);
+  }
+}
+function removeChild(id){
+  const el = document.getElementById(id);
+  if(el) el.remove();
+}
+function renderChildren(){
+  document.querySelectorAll('.child-block').forEach(block => {
+    renderDatesForChild(block);
+    loadAndApplyExisting(block);
+  });
+  if(document.getElementById('childrenContainer').children.length === 0){
+    loadAllChildrenForSubmitter();
+  }
+}
+
+async function loadAllChildrenForSubmitter(){
+  const ym = document.getElementById('monthInput').value;
+  let names = [];
+  if(lineDisplayName){
+    try{
+      const r = await apiGet('getAttendanceList', { month: ym });
+      const submissions = r.submissions || [];
+      const mine = submissions.filter(s => s.submitterLineName === lineDisplayName);
+      // unique names, most recently updated first
+      const seen = new Set();
+      mine.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+      mine.forEach(s => { if(s.name && !seen.has(s.name)){ seen.add(s.name); names.push(s.name); } });
+    }catch(e){ console.error(e); }
+  }
+  if(names.length === 0){
+    // first time using the app: start with one block prefilled with the LINE name
+    addChild(lineDisplayName || '');
+  }else{
+    names.forEach(n => addChild(n));
+  }
+}
+function locationBadge(slot){
+  if(!slot || !slot.location) return '';
+  const label = (slot.location === 'その他' && slot.customLocation) ? slot.customLocation : slot.location;
+  return `<span class="loc-badge" data-loc="${escapeHtml(slot.location)}">${escapeHtml(label)}</span>`;
+}
+function categoryBadges(slot){
+  if(!slot.categories || slot.categories.length === 0) return '';
+  return slot.categories.map(c => `<span class="cat-badge" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</span>`).join('');
+}
+function coachLine(slot){
+  if(!slot.coaches || slot.coaches.length === 0) return '';
+  const badges = slot.coaches.map(c => `<span class="coach-badge" data-coach="${escapeHtml(c)}">${escapeHtml(c)}</span>`).join('');
+  return `<div class="coach-line">責任者: ${badges}</div>`;
+}
+function schoolNoteBadges(slot){
+  if(!slot.schoolNotes || slot.schoolNotes.length === 0) return '';
+  return `<div class="school-note-line">${slot.schoolNotes.map(n => `<span class="school-note-badge">${escapeHtml(n)}</span>`).join('')}</div>`;
+}
+
+function formatTimeRange(slot){
+  if(slot.startTime && slot.endTime) return `${slot.startTime}〜${slot.endTime}`;
+  if(slot.startTime) return `${slot.startTime}〜`;
+  if(slot.endTime) return `〜${slot.endTime}`;
+  return '';
+}
+
+function renderSlotAttendBlock(slot, idx, totalSlots){
+  const timeRange = formatTimeRange(slot);
+  const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${categoryBadges(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+  const coachLn = coachLine(slot);
+  const noteLn = schoolNoteBadges(slot);
+  const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
+  const slotLabel = totalSlots > 1 ? `<div class="slot-title">会場${idx + 1}</div>` : '';
+  return `
+    <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}">
+      ${slotLabel}
+      ${metaLine}${coachLn}${noteLn}${msgLine}
+      <div class="chips">
+        <div class="chip" data-type="attend" onclick="selectChip(this)">参加</div>
+        <div class="chip" data-type="absent" onclick="selectChip(this)">欠席</div>
+        <div class="chip" data-type="late" onclick="selectChip(this)">遅刻</div>
+        <div class="chip" data-type="early" onclick="selectChip(this)">早退</div>
+        <div class="chip" data-type="other" onclick="selectChip(this)">フリーメッセージ</div>
+      </div>
+      <div class="time-inline" data-type="late">
+        <span class="tlabel">到着予定</span><input type="time" class="lateTime">
+      </div>
+      <div class="time-inline" data-type="early">
+        <span class="tlabel">退出予定</span><input type="time" class="earlyTime">
+      </div>
+      <div class="other-inline" data-type="other">
+        <input type="text" class="otherMessage" placeholder="フリーメッセージ">
+      </div>
+    </div>
+  `;
+}
+
+function renderDatesForChild(block){
+  const list = block.querySelector('.datesList');
+  if(practiceDates.length === 0){
+    list.innerHTML = `<div class="empty">この月の練習日がまだ設定されていません</div>`;
+    return;
+  }
+  list.innerHTML = practiceDates.map(pd => {
+    const ds = pd.date;
+    const slotsHtml = pd.slots.map((slot, idx) => renderSlotAttendBlock(slot, idx, pd.slots.length)).join('');
+    return `
+    <div class="date-row" data-date="${ds}">
+      <div class="date-label">${shortLabel(ds)}</div>
+      ${slotsHtml}
+    </div>
+  `;
+  }).join('');
+}
+function selectChip(el){
+  const scope = el.closest('.slot-attend-block');
+  const type = el.dataset.type;
+  const wasOn = el.classList.contains('on');
+
+  // clear all chips in this slot block, then set only the clicked one (toggle off if tapped again)
+  scope.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  scope.querySelectorAll('.time-inline').forEach(t => t.classList.remove('show'));
+  scope.querySelectorAll('.other-inline').forEach(t => t.classList.remove('show'));
+
+  if(!wasOn){
+    el.classList.add('on');
+    if(type === 'late' || type === 'early'){
+      scope.querySelector(`.time-inline[data-type="${type}"]`).classList.add('show');
+    }
+    if(type === 'other'){
+      scope.querySelector(`.other-inline[data-type="other"]`).classList.add('show');
+    }
+  }
+}
+
+async function submitAll(){
+  const ym = document.getElementById('monthInput').value;
+  const msg = document.getElementById('statusMsg');
+  const blocks = document.querySelectorAll('.child-block');
+  if(blocks.length === 0){ msg.textContent = 'お子様を追加してください'; return; }
+
+  msg.textContent = '送信中…';
+  let ok = true;
+  let errorDetail = '';
+  let sentCount = 0;
+  let skippedNoName = 0;
+
+  try{
+    for(const block of blocks){
+      const nameEl = block.querySelector('.childName');
+      const name = nameEl ? nameEl.value.trim() : '';
+      if(!name){ skippedNoName++; continue; }
+      const days = {};
+      block.querySelectorAll('.date-row').forEach(row => {
+        const ds = row.dataset.date;
+        const dayData = {};
+        row.querySelectorAll('.slot-attend-block').forEach(sb => {
+          const idx = sb.dataset.slotIdx;
+          const activeChip = sb.querySelector('.chip.on');
+          if(!activeChip) return;
+          const status = activeChip.dataset.type; // attend | absent | late | early | other
+          const entry = { status };
+          if(status === 'late'){
+            const t = sb.querySelector('.lateTime');
+            entry.time = t ? t.value : null;
+          }
+          if(status === 'early'){
+            const t = sb.querySelector('.earlyTime');
+            entry.time = t ? t.value : null;
+          }
+          if(status === 'other'){
+            const m = sb.querySelector('.otherMessage');
+            entry.message = m ? m.value.trim() : '';
+          }
+          dayData['slot' + idx] = entry;
+        });
+        if(Object.keys(dayData).length > 0) days[ds] = dayData;
+      });
+      try{
+        const result = await apiPost({
+          action: 'saveAttendance', month: ym, name,
+          submitterLineName: lineDisplayName || null, days
+        });
+        if(!result || !result.ok){ ok = false; } else { sentCount++; }
+      }catch(e){ console.error(e); ok = false; errorDetail = e.message || String(e); }
+    }
+  }catch(e){
+    console.error(e);
+    ok = false;
+    errorDetail = e.message || String(e);
+  }
+
+  if(sentCount === 0 && skippedNoName > 0){
+    msg.textContent = 'お名前が入力されていないため送信されていません。「お子様・コーチのお名前」欄を確認してください。';
+    return;
+  }
+
+  msg.textContent = ok
+    ? 'この月の出欠を送信しました。ありがとうございます！反映まで少しお待ちください…'
+    : `送信に失敗しました。${errorDetail ? '(' + errorDetail + ')' : 'もう一度お試しください。'}`;
+  setTimeout(loadSummary, 1500);
+}
+
+async function loadSummary(){
+  const ym = document.getElementById('monthInput').value;
+  const container = document.getElementById('summaryContainer');
+  if(practiceDates.length === 0){
+    container.innerHTML = '<div class="empty">練習日が設定されていません</div>';
+    return;
+  }
+  try{
+    const r = await apiGet('getAttendanceList', { month: ym });
+    const submissions = r.submissions || [];
+    if(submissions.length === 0){
+      container.innerHTML = '<div class="empty">まだ回答がありません</div>';
+      return;
+    }
+    let html = '';
+    const labelMap = { attend: '出席', absent: '欠席', late: '遅刻', early: '早退', other: 'フリーメッセージ' };
+    const statusOrder = ['attend', 'absent', 'late', 'early', 'other'];
+    for(const pd of practiceDates){
+      const ds = pd.date;
+      const slotBlocksHtml = pd.slots.map((slot, idx) => {
+        const groups = { attend: [], absent: [], late: [], early: [], other: [] };
+        for(const s of submissions){
+          const dayData = s.days ? s.days[ds] : null;
+          const d = dayData ? dayData['slot' + idx] : null;
+          if(!d || !d.status || !groups[d.status]) continue;
+          let entryText = escapeHtml(s.name);
+          if(d.status === 'late' || d.status === 'early') entryText += d.time ? `(${d.time})` : '';
+          if(d.status === 'other') entryText += d.message ? `:${escapeHtml(d.message)}` : '';
+          groups[d.status].push(entryText);
+        }
+        const totalCount = statusOrder.reduce((sum, k) => sum + groups[k].length, 0);
+        if(totalCount === 0) return '';
+        const timeRange = formatTimeRange(slot);
+        const metaLine = (slot.location || timeRange) ? `<div class="date-meta">${locationBadge(slot)}${categoryBadges(slot)}${timeRange ? escapeHtml(timeRange) : ''}</div>` : '';
+        const coachLn = coachLine(slot);
+        const noteLn = schoolNoteBadges(slot);
+        const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
+        const slotLabel = pd.slots.length > 1 ? `<div class="slot-title">会場${idx + 1}</div>` : '';
+        const groupsHtml = statusOrder
+          .filter(k => groups[k].length > 0)
+          .map(k => `
+            <div class="status-group">
+              <span class="group-label ${k}">${labelMap[k]}（${groups[k].length}）</span>
+              <div class="group-names">${groups[k].map(n => `<div class="name-item">${n}</div>`).join('')}</div>
+            </div>
+          `).join('');
+        return `<div class="slot-color-${idx}">${slotLabel}${metaLine}${coachLn}${noteLn}${msgLine}${groupsHtml}</div>`;
+      }).join('');
+      if(!slotBlocksHtml.trim()) continue;
+      html += `<div class="summary-date"><div class="d-title">${shortLabel(ds)}</div>${slotBlocksHtml}</div>`;
+    }
+    container.innerHTML = html || '<div class="empty">まだ回答がありません</div>';
+  }catch(e){
+    console.error(e);
+    container.innerHTML = '<div class="empty">読み込みに失敗しました</div>';
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function bulletize(text){
+  return text.split('\n').map(line => line.trim()).filter(Boolean)
+    .map(line => `<li>${escapeHtml(line.replace(/^[・\-*]\s*/, ''))}</li>`).join('');
+}
+
+async function loadMonthSummaryDisplay(){
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await apiGet('getMonthSummary', { month: ym });
+    const current = (r.currentSummary || '').trim();
+    const next = (r.nextSummary || '').trim();
+    const card = document.getElementById('announcementCard');
+    const curEl = document.getElementById('currentMonthSummaryDisplay');
+    const nextEl = document.getElementById('nextMonthSummaryDisplay');
+    if(!current && !next){
+      card.style.display = 'none';
+      curEl.innerHTML = '';
+      nextEl.innerHTML = '';
+      return;
+    }
+    card.style.display = 'block';
+    curEl.innerHTML = current ? `<div class="announce-label">今月のお知らせ</div><ul>${bulletize(current)}</ul>` : '';
+    nextEl.innerHTML = next ? `<div class="announce-label">来月のお知らせ</div><ul>${bulletize(next)}</ul>` : '';
+  }catch(e){
+    console.error(e);
+  }
+}
+
+async function loadMonthSummaryIntoInputs(){
+  const ym = document.getElementById('monthInput').value;
+  try{
+    const r = await apiGet('getMonthSummary', { month: ym });
+    document.getElementById('currentMonthSummaryInput').value = r.currentSummary || '';
+    document.getElementById('nextMonthSummaryInput').value = r.nextSummary || '';
+  }catch(e){
+    console.error(e);
+  }
+}
+
+async function saveMonthSummary(){
+  const ym = document.getElementById('monthInput').value;
+  const current = document.getElementById('currentMonthSummaryInput').value;
+  const next = document.getElementById('nextMonthSummaryInput').value;
+  try{
+    const result = await apiPost({ action: 'saveMonthSummary', month: ym, currentSummary: current, nextSummary: next });
+    if(!result || !result.ok){
+      alert('サマリーの保存に失敗しました。');
+      return;
+    }
+    alert('サマリーを保存しました。');
+    loadMonthSummaryDisplay();
+  }catch(e){
+    console.error(e);
+    alert('サマリーの保存に失敗しました。(' + (e.message || e) + ')');
+  }
+}
+
+document.getElementById('monthInput').addEventListener('change', () => {
+  document.getElementById('childrenContainer').innerHTML = '';
+  document.getElementById('adminPanel').style.display = 'none';
+  loadPracticeDates();
+});
+
+async function initLiff(){
+  const greeting = document.getElementById('userGreeting');
+  try{
+    if(typeof liff === 'undefined'){
+      greeting.textContent = 'お子様・コーチのお名前を入力してください';
+      loadPracticeDates();
+      return;
+    }
+    // Replace YOUR_LIFF_ID with the ID issued in the LINE Developers console
+    await liff.init({ liffId: 'YOUR_LIFF_ID_BC' });
+    if(!liff.isLoggedIn()){ liff.login(); return; }
+    const profile = await liff.getProfile();
+    lineDisplayName = profile.displayName;
+    greeting.textContent = `${profile.displayName} さん、こんにちは`;
+    loadPracticeDates();
+  }catch(e){
+    console.warn('LIFF init skipped (プレビュー環境):', e);
+    greeting.textContent = 'お子様・コーチのお名前を入力してください';
+    loadPracticeDates();
+  }
+}
+
+initLiff();
+</script>
+
+</body>
+</html>
