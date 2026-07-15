@@ -490,10 +490,13 @@ function renderSlotEditor(ds, slot, idx, totalSlots){
   `;
 }
 
+function defaultSecondSlot(){
+  return { location: '六コミ', customLocation: '', startTime: '15:30', endTime: '19:00', categories: [], coaches: ['杉山'], message: '', schoolNotes: [] };
+}
 function addSlot(ds){
   const detail = adminSelection.get(ds);
   if(!detail || detail.slots.length >= MAX_SLOTS) return;
-  detail.slots.push(defaultSlot());
+  detail.slots.push(detail.slots.length === 1 ? defaultSecondSlot() : defaultSlot());
   renderDateDetailList();
 }
 function removeSlot(ds, idx){
@@ -765,13 +768,18 @@ function renderSlotAttendBlock(slot, idx, totalSlots){
 
 function renderDatesForChild(block){
   const list = block.querySelector('.datesList');
+  const todayStr = getTodayStr();
+  const upcomingDates = practiceDates.filter(pd => pd.date >= todayStr);
   if(practiceDates.length === 0){
     list.innerHTML = `<div class="empty">この月の練習日がまだ設定されていません</div>`;
     return;
   }
-  const todayStr = getTodayStr();
+  if(upcomingDates.length === 0){
+    list.innerHTML = `<div class="empty">今月の残りの練習日はありません</div>`;
+    return;
+  }
   const nextDate = computeNextPracticeDate(practiceDates.map(pd => pd.date));
-  list.innerHTML = practiceDates.map(pd => {
+  list.innerHTML = upcomingDates.map(pd => {
     const ds = pd.date;
     const slotsHtml = pd.slots.map((slot, idx) => renderSlotAttendBlock(slot, idx, pd.slots.length)).join('');
     return `
