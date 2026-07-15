@@ -754,7 +754,7 @@ function renderSlotAttendBlock(slot, idx, totalSlots){
   const msgLine = slot.message ? `<div class="date-note">🏸 ${escapeHtml(slot.message)}</div>` : '';
   const slotLabel = totalSlots > 1 ? `<div class="slot-title">会場${idx + 1}</div>` : '';
   return `
-    <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}">
+    <div class="slot-attend-block slot-color-${idx}" data-slot-idx="${idx}" data-start="${slot.startTime || ''}" data-end="${slot.endTime || ''}">
       ${slotLabel}
       ${metaLine}${catLine}${coachLn}${noteLn}${msgLine}
       <div class="chips">
@@ -801,6 +801,16 @@ function renderDatesForChild(block){
   `;
   }).join('');
 }
+function addMinutesToTime(timeStr, deltaMinutes){
+  if(!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  let total = h * 60 + m + deltaMinutes;
+  total = ((total % 1440) + 1440) % 1440;
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
+}
+
 function selectChip(el){
   const scope = el.closest('.slot-attend-block');
   const type = el.dataset.type;
@@ -815,6 +825,18 @@ function selectChip(el){
     el.classList.add('on');
     if(type === 'late' || type === 'early'){
       scope.querySelector(`.time-inline[data-type="${type}"]`).classList.add('show');
+      if(type === 'late'){
+        const input = scope.querySelector('.lateTime');
+        if(input && !input.value && scope.dataset.start){
+          input.value = addMinutesToTime(scope.dataset.start, 30);
+        }
+      }
+      if(type === 'early'){
+        const input = scope.querySelector('.earlyTime');
+        if(input && !input.value && scope.dataset.end){
+          input.value = addMinutesToTime(scope.dataset.end, -60);
+        }
+      }
     }
     if(type === 'other'){
       scope.querySelector(`.other-inline[data-type="other"]`).classList.add('show');
