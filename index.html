@@ -48,11 +48,17 @@
     border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer;background:#fff;
   }
   .cal-day.blank{border:none;cursor:default;}
+  .cal-day.day-sat{color:#1F5C99;font-weight:700;}
+  .cal-day.day-sun, .cal-day.day-holiday{color:#C0392B;font-weight:700;}
   .cal-day.active{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;}
   .save-btn{margin-top:10px;width:100%;background:var(--navy);color:#fff;border:none;padding:10px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;}
 
   .detail-row{border:1.5px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;}
   .detail-row .detail-date{font-size:13px;font-weight:700;margin-bottom:8px;}
+  .detail-row.day-sat{border-left:4px solid #1F5C99;}
+  .detail-row.day-sun, .detail-row.day-holiday{border-left:4px solid #C0392B;}
+  .detail-row.day-sat .detail-date{color:#1F5C99;}
+  .detail-row.day-sun .detail-date, .detail-row.day-holiday .detail-date{color:#C0392B;}
   .loc-radios{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
   .loc-radio{
     border:1.5px solid var(--border);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:700;
@@ -388,7 +394,7 @@ function defaultSlotForDate(ds){
   return base;
 }
 
-function toggleAdmin(){
+async function toggleAdmin(){
   const panel = document.getElementById('adminPanel');
   const show = panel.style.display === 'none';
   panel.style.display = show ? 'block' : 'none';
@@ -396,6 +402,11 @@ function toggleAdmin(){
     adminSelection = new Map(practiceDates.map(pd => [pd.date, {
       slots: pd.slots.map(s => ({ ...s, categories: [...(s.categories||[])], coaches: [...(s.coaches||[])], schoolNotes: [...(s.schoolNotes||[])] }))
     }]));
+    const ym = document.getElementById('monthInput').value;
+    const total = daysInMonth(ym);
+    const allDatesInMonth = [];
+    for(let d=1; d<=total; d++) allDatesInMonth.push(dateStr(ym, d));
+    await ensureHolidaysLoaded(allDatesInMonth);
     renderCalGrid();
     renderDateDetailList();
     loadMonthSummaryIntoInputs();
@@ -412,7 +423,7 @@ function renderCalGrid(){
   for(let d=1; d<=total; d++){
     const ds = dateStr(ym, d);
     const active = adminSelection.has(ds) ? 'active' : '';
-    html += `<div class="cal-day ${active}" data-date="${ds}" onclick="toggleCalDay('${ds}')">${d}</div>`;
+    html += `<div class="cal-day ${active} ${dayClassFor(ds)}" data-date="${ds}" onclick="toggleCalDay('${ds}')">${d}</div>`;
   }
   grid.innerHTML = html;
 }
@@ -437,8 +448,8 @@ function renderDateDetailList(){
       ? `<button type="button" class="add-slot-btn" onclick="addSlot('${ds}')">＋ 会場を追加（最大${MAX_SLOTS}）</button>`
       : '';
     return `
-      <div class="detail-row" data-date="${ds}">
-        <div class="detail-date">${shortLabel(ds)}</div>
+      <div class="detail-row ${dayClassFor(ds)}" data-date="${ds}">
+        <div class="detail-date">${dateLabelWithHoliday(ds)}</div>
         ${slotsHtml}
         ${addBtn}
       </div>
